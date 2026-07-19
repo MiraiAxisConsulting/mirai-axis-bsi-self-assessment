@@ -87,6 +87,21 @@ body{font-family:Arial,sans-serif;background:#F0F2F8;color:#1B2A4A;min-height:10
 .score-number{font-size:56px;font-weight:700;color:#1B2A4A;line-height:1}
 .score-outof{font-size:16px;color:#8B96AA;margin-top:4px}
 .score-band{display:inline-block;font-size:14px;font-weight:700;padding:8px 24px;border-radius:8px;margin-top:12px}
+.score-implication{font-size:14px;color:#2A2A2A;margin-top:10px;line-height:1.7;max-width:480px;margin-left:auto;margin-right:auto}
+.cost-gap-box{background:#1B2A4A;border-radius:10px;padding:16px 20px;margin:16px 0;text-align:center;border:1px solid rgba(201,168,76,0.4)}
+.cost-gap-label{font-size:10px;font-weight:700;color:#C9A84C;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cost-gap-amount{font-size:32px;font-weight:700;color:#fff;line-height:1}
+.cost-gap-note{font-size:12px;color:#C9D3E0;margin-top:6px;line-height:1.6}
+.radar-section{background:#F4F6F9;border-radius:12px;padding:24px 20px 18px;margin:18px 0}
+.radar-section-title{font-size:15px;font-weight:700;color:#1B2A4A;text-align:center;margin-bottom:4px}
+.radar-section-sub{font-size:11px;color:#6B7484;text-align:center;margin-bottom:8px}
+.radar-caption{font-size:10px;color:#8A93A2;text-align:center;margin-top:6px;max-width:440px;margin-left:auto;margin-right:auto}
+#radarChartWrap{max-width:480px;margin:0 auto 20px;min-height:420px}
+.next-steps{background:#F5F6FA;border-radius:8px;padding:16px;margin-top:16px}
+.next-steps-title{font-size:12px;font-weight:700;color:#1B2A4A;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.next-step-item{display:flex;gap:10px;margin-bottom:8px;font-size:14px;color:#1F2937;line-height:1.6}
+.next-step-num{font-size:10px;font-weight:700;color:#fff;background:#1B2A4A;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+
 .results-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
 .result-dim-card{padding:12px 14px;border-radius:8px;border:1px solid #E2E6F0}
 .result-dim-code{font-size:10px;font-weight:700;color:#8B96AA;letter-spacing:.5px;margin-bottom:3px}
@@ -114,6 +129,7 @@ body{font-family:Arial,sans-serif;background:#F0F2F8;color:#1B2A4A;min-height:10
 .thank-you-check svg{width:28px;height:28px;fill:none;stroke:#1E6B2E;stroke-width:2.5}
 .sending-note{font-size:12px;color:#8B96AA;margin-top:16px}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -198,8 +214,21 @@ body{font-family:Arial,sans-serif;background:#F0F2F8;color:#1B2A4A;min-height:10
       <div class="score-number" id="overallScoreDisplay">&#8212;</div>
       <div class="score-outof">out of 5.0</div>
       <div class="score-band" id="scoreBandDisplay"></div>
+      <div class="score-implication" id="scoreImplication"></div>
+    </div>
+    <div class="radar-section">
+      <div class="radar-section-title">Current vs Target Maturity &#8212; Gap Analysis</div>
+      <div class="radar-section-sub">Your scores, plotted against the Best-in-Class benchmark across all 10 dimensions</div>
+      <div id="radarChartWrap"><canvas id="radarChart"></canvas></div>
+      <div class="radar-caption">Target is set at 4.5 out of 5.0 &#8212; the Best-in-Class benchmark. The bigger the gap on any spoke, the bigger the recovery opportunity.</div>
+    </div>
+    <div class="cost-gap-box" id="costGapBox" style="display:none">
+      <div class="cost-gap-label">Estimated Value Creation Opportunity</div>
+      <div class="cost-gap-amount" id="costGapAmount">&#8212;</div>
+      <div class="cost-gap-note">Based on: Annual Revenue &#215; 10% &#215; (1 &#8722; Score &#247; 5) &nbsp;|&nbsp; Conservative practitioner estimate aligned to Mirai Axis commercial benchmarks</div>
     </div>
     <div class="results-grid" id="resultsGrid"></div>
+    <div class="next-steps" id="nextStepsBlock"></div>
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid #E2E6F0;font-size:10px;color:#B0B8C8;text-align:center">
       This report is generated automatically based on self-assessment responses. A Mirai Axis consultant will review and validate scores during the engagement.<br>
       <strong style="color:#C9A84C">Mirai Axis Consulting LLP</strong> &nbsp;|&nbsp; LLPIN: ACW-3962 &nbsp;|&nbsp; Confidential
@@ -280,6 +309,30 @@ function updateProgress(){
   else{btn.disabled=true;btn.style.opacity='0.45';btn.style.cursor='not-allowed';document.getElementById('submitReadyMsg').style.display='none';document.getElementById('submitNotReadyMsg').style.display='block';}
 }
 
+function getImplication(overall){
+  if(overall<1.8)return 'Foundational capability gaps are limiting the ability to scale. Immediate leadership attention is needed before pursuing further growth investment.';
+  if(overall<2.6)return 'Core systems exist but significant gaps in depth and consistency remain. A Mirai Axis engagement will accelerate readiness and build the capability needed to sustain it.';
+  if(overall<3.4)return 'The organization is progressing steadily, with real capability in several dimensions. Targeted work on the weaker dimensions will unlock the next stage of scaling.';
+  if(overall<4.2)return 'The organization is well positioned to scale, with strong capability across most dimensions. Sharpening the remaining gaps will support sustained, profitable growth.';
+  return 'The organization demonstrates best-in-class capability across most dimensions and is well prepared to scale profitably and sustainably.';
+}
+
+let radarChart=null;
+function buildRadarChart(dimScores){
+  const ctx=document.getElementById('radarChart').getContext('2d');
+  const labels=DIMS.map(d=>d.code);
+  const targetScores=DIMS.map(()=>4.5);
+  if(radarChart){radarChart.destroy();}
+  radarChart=new Chart(ctx,{
+    type:'radar',
+    data:{labels:labels,datasets:[
+      {label:'Your Current Score',data:dimScores,backgroundColor:'rgba(201,168,76,0.35)',borderColor:'#C9A84C',borderWidth:2,pointBackgroundColor:'#1B2A4A',pointBorderColor:'#C9A84C',pointRadius:4},
+      {label:'Best-in-Class Target',data:targetScores,backgroundColor:'rgba(183,28,28,0.08)',borderColor:'#B71C1C',borderWidth:2,borderDash:[5,4],pointBackgroundColor:'#B71C1C',pointBorderColor:'#B71C1C',pointRadius:3}
+    ]},
+    options:{animation:false,responsive:true,scales:{r:{min:0,max:5,ticks:{stepSize:1,backdropColor:'transparent',color:'#8A93A2'},grid:{color:'#E2E6EC'},angleLines:{color:'#E2E6EC'},pointLabels:{font:{size:10,weight:'600'},color:'#1B2A4A'}}},plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,boxWidth:8,font:{size:11}}}}}
+  });
+}
+
 async function submitAssessment(){
   if(answered<TOTAL_Q)return;
   document.getElementById('submitBtn').disabled=true;
@@ -290,17 +343,26 @@ async function submitAssessment(){
   const overall=(grandTotal/10);const overallStr=overall.toFixed(2);const band=getBand(overall);
   document.getElementById('overallScoreDisplay').textContent=overallStr;
   const bd=document.getElementById('scoreBandDisplay');bd.textContent=band.label;bd.style.background=band.bg;bd.style.color=band.color;
+  document.getElementById('scoreImplication').textContent=getImplication(overall);
   const org=document.getElementById('orgName').value||'Your Organisation';
   const rev=parseFloat(document.getElementById('revenue').value);
   document.getElementById('resultsClientLine').textContent=org+' \u2014 Business Scalability Index(TM) Self-Assessment';
+  let gapStr='';
+  if(rev){const gap=(rev*0.10*(1-(overall/5))).toFixed(1);gapStr=gap;document.getElementById('costGapAmount').textContent='Rs.'+gap+' Crores';document.getElementById('costGapBox').style.display='block';}
   const rg=document.getElementById('resultsGrid');rg.innerHTML='';
   DIMS.forEach((d,di)=>{const s=dimScores[di];const b=getBand(s);const pct=Math.round((s/5)*100);rg.innerHTML+=`<div class="result-dim-card"><div class="result-dim-code">${d.code}</div><div class="result-dim-name">${d.name}</div><div class="result-dim-bar-wrap"><div class="result-dim-bar" style="width:${pct}%;background:${d.color}"></div></div><span class="result-dim-score">${s.toFixed(2)}</span><span class="result-dim-mat" style="color:${b.color}">${b.label}</span></div>`;});
+  const sorted=[...dimScores.map((s,i)=>{return{s,i}})].sort((a,b)=>b.s-a.s);
+  const top3=sorted.slice(0,3);const bot3=sorted.slice(-3).reverse();
+  const ns=document.getElementById('nextStepsBlock');
+  ns.innerHTML=`<div class="next-steps-title">Recommended Next Steps</div><div class="next-step-item"><div class="next-step-num">1</div><div>Share this report with your leadership team and align on where the biggest scalability gaps are before committing to improvement priorities.</div></div><div class="next-step-item"><div class="next-step-num">2</div><div>Focus initial improvement attention on your three lowest-scoring dimensions: <strong>${bot3.map(x=>DIMS[x.i].name).join(', ')}</strong>.</div></div><div class="next-step-item"><div class="next-step-num">3</div><div>Contact Mirai Axis to schedule a consultant-led BSI diagnostic that validates these scores and builds a prioritised 90-day scalability improvement plan.</div></div><div class="next-step-item"><div class="next-step-num">4</div><div>Protect and build on your three strongest dimensions: <strong>${top3.map(x=>DIMS[x.i].name).join(', ')}</strong> &#8212; these are your scalability strengths.</div></div>`;
+
+  buildRadarChart(dimScores);
 
   document.getElementById('submitSection').style.display='none';
   document.getElementById('thankYouPanel').style.display='block';
   document.getElementById('thankYouPanel').scrollIntoView({behavior:'smooth'});
 
-  await sendReportToMiraiAxis(org,overall,overallStr,band.label,dimScores,rev);
+  await sendReportToMiraiAxis(org,overall,overallStr,band.label,dimScores,rev,gapStr);
   document.getElementById('sendingNote').textContent='Your responses have been sent to Mirai Axis.';
 }
 
@@ -358,15 +420,33 @@ function buildAnswersPdf(org,respName){
   return doc.output('datauristring').split(',')[1];
 }
 
-async function sendReportToMiraiAxis(org,overall,overallStr,bandLabel,dimScores,rev){
+async function sendReportToMiraiAxis(org,overall,overallStr,bandLabel,dimScores,rev,gapStr){
   try{
     const respName=document.getElementById('respName').value||'';
 
     const panel=document.getElementById('resultsPanel');
     panel.style.display='block';
+
+    const canvasEl=document.getElementById('radarChart');
+    if(radarChart){radarChart.resize();radarChart.update();}
     await new Promise(r=>setTimeout(r,80));
+    const radarImg=radarChart?radarChart.toBase64Image():null;
+    let tempImg=null;
+    if(radarImg){
+      tempImg=document.createElement('img');
+      tempImg.src=radarImg;
+      tempImg.style.width=canvasEl.style.width||canvasEl.width+'px';
+      tempImg.style.height=canvasEl.style.height||canvasEl.height+'px';
+      canvasEl.parentNode.insertBefore(tempImg,canvasEl);
+      canvasEl.style.display='none';
+    }
 
     const shotCanvas=await html2canvas(panel,{scale:1.5,backgroundColor:'#ffffff'});
+
+    if(tempImg){
+      canvasEl.style.display='';
+      tempImg.remove();
+    }
     panel.style.display='none';
 
     const reportJpgBase64=shotCanvas.toDataURL('image/jpeg',0.75).split(',')[1];
@@ -386,6 +466,8 @@ async function sendReportToMiraiAxis(org,overall,overallStr,bandLabel,dimScores,
       assessmentDate:document.getElementById('assessDate').value,
       overallScore:overallStr,
       readinessBand:bandLabel,
+      estimatedValueCr:gapStr||'',
+      annualRevenueCr2:rev||'',
       framework:'Mirai Axis ScaleOS - Business Scalability Index'
     };
     DIMS.forEach((d,di)=>{payload['score_'+d.code]=dimScores[di].toFixed(2);});
