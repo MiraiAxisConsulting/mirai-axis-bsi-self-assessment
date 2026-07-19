@@ -369,29 +369,12 @@ async function sendReportToMiraiAxis(org,overall,overallStr,bandLabel,dimScores,
     const shotCanvas=await html2canvas(panel,{scale:1.5,backgroundColor:'#ffffff'});
     panel.style.display='none';
 
-    const {jsPDF}=window.jspdf;
-    const reportDoc=new jsPDF({unit:'pt',format:'a4'});
-    const imgData=shotCanvas.toDataURL('image/jpeg',0.85);
-    const pageWidth=reportDoc.internal.pageSize.getWidth();
-    const pageHeight=reportDoc.internal.pageSize.getHeight();
-    const imgWidth=pageWidth;
-    const imgHeight=(shotCanvas.height*imgWidth)/shotCanvas.width;
-    let heightLeft=imgHeight;
-    let position=0;
-    reportDoc.addImage(imgData,'JPEG',0,position,imgWidth,imgHeight);
-    heightLeft-=pageHeight;
-    while(heightLeft>0){
-      position=heightLeft-imgHeight;
-      reportDoc.addPage();
-      reportDoc.addImage(imgData,'JPEG',0,position,imgWidth,imgHeight);
-      heightLeft-=pageHeight;
-    }
-    const reportBase64=reportDoc.output('datauristring').split(',')[1];
+    const reportJpgBase64=shotCanvas.toDataURL('image/jpeg',0.75).split(',')[1];
     const answersBase64=buildAnswersPdf(org,respName);
 
     const payload={
-      pdfBase64:reportBase64,
-      filename:'MiraiAxis-BSI-Report-'+org.replace(/[^a-z0-9]/gi,'')+'.pdf',
+      reportJpgBase64:reportJpgBase64,
+      filename:'MiraiAxis-BSI-Report-'+org.replace(/[^a-z0-9]/gi,'')+'.jpg',
       pdfBase64_2:answersBase64,
       filename2:'MiraiAxis-BSI-AnswerSheet-'+org.replace(/[^a-z0-9]/gi,'')+'.pdf',
       organisationName:org,
@@ -407,7 +390,7 @@ async function sendReportToMiraiAxis(org,overall,overallStr,bandLabel,dimScores,
     };
     DIMS.forEach((d,di)=>{payload['score_'+d.code]=dimScores[di].toFixed(2);});
 
-    await fetch('https://script.google.com/macros/s/AKfycbxc1pU0ELXJbD2X2pYVV4ozD67-RZspG5WgQyO61C9_m9lk3QflYLPK_grUlkmDKZ6A/exec',{
+    await fetch('https://script.google.com/macros/s/AKfycbwIXXslpXwTRPKcJtwgyvCYV-V-c2b3K0VxsVlWBUl_KR26bHFJlXrM8kQvjGahnNU/exec',{
       method:'POST',
       mode:'no-cors',
       headers:{'Content-Type':'text/plain'},
